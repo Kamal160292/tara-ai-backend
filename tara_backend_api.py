@@ -17,14 +17,20 @@ def home():
     return {"message": "Welcome to Tara AI Backend!"}
 
 @app.get("/get_quote")
-def get_quote(
-    pincode: str, product: str, family_structure: str, parent_size: str, age: str, sum_insured: str
-):
+def get_quote(pincode: str, product: str, family_structure: str, parent_size: str, age: str, sum_insured: str):
     """Retrieve pricing based on user input."""
+    
+    # Fetch Zone from Pincode Mapping
     zone = knowledge_base["Pincode_Zone_Mapping"].get(pincode, {}).get(product, {}).get("Zone", "Unknown")
+    
     if zone == "Unknown":
         raise HTTPException(status_code=404, detail="Pincode not mapped to a valid zone")
 
+    # Debugging: Print Variables to Logs
+    print(f"Looking for Pricing: Product={product}, Zone={zone}, Family={family_structure}, Parent Size={parent_size}, Age={age}, Sum Insured={sum_insured}")
+    print(f"Raw Pricing Data: {knowledge_base['Pricing_Data'].get(product, {}).get(zone, {}).get(family_structure, {}).get(parent_size, {}).get(age, {}).get(f'Sum_Insured_{sum_insured}', {})}")
+
+    # Fetch Pricing Data
     price_data = (
         knowledge_base["Pricing_Data"]
         .get(product, {})
@@ -58,11 +64,13 @@ def get_exclusions(product: str):
 @app.get("/compare_plans")
 def compare_plans(pincode: str, product1: str, product2: str, sum_insured: str):
     """Compare two insurance plans based on pricing and coverage."""
+    
+    # Fetch Zone
     zone = knowledge_base["Pincode_Zone_Mapping"].get(pincode, {}).get(product1, {}).get("Zone", "Unknown")
-
     if zone == "Unknown":
         raise HTTPException(status_code=404, detail="Pincode not mapped to a valid zone")
 
+    # Fetch Pricing and Coverage for both products
     price1 = knowledge_base["Pricing_Data"].get(product1, {}).get(zone, {}).get(f"Sum_Insured_{sum_insured}", {})
     price2 = knowledge_base["Pricing_Data"].get(product2, {}).get(zone, {}).get(f"Sum_Insured_{sum_insured}", {})
     coverage1 = knowledge_base["Benefits_Data"].get(product1, {}).get(f"Sum_Insured_{sum_insured}", {})
@@ -75,5 +83,3 @@ def compare_plans(pincode: str, product1: str, product2: str, sum_insured: str):
             "product2": {"pricing": price2, "coverage": coverage2},
         },
     }
-
-
