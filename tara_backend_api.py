@@ -1,88 +1,79 @@
-from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel
+from fastapi import FastAPI, HTTPException, Query
 import json
-import gzip
+import os
 
-# ✅ Initialize FastAPI app
+# Load AI Knowledge Base JSON
+JSON_FILE = "Final_Structured_AUM_Knowledge_Base_With_Pricing_Adjusted.json"
+if not os.path.exists(JSON_FILE):
+    raise FileNotFoundError(f"Error: {JSON_FILE} not found!")
+
+with open(JSON_FILE, "r") as file:
+    knowledge_base = json.load(file)
+
 app = FastAPI()
 
-# ✅ Root Route to confirm API is live
 @app.get("/")
 def home():
-    return {"message": "Tara AI Backend is running 🎉"}
+    return {"message": "Welcome to Tara AI Backend!"}
 
-# ✅ Load the optimized JSON file
-JSON_FILE_PATH = "PARA_AUM_Production_Ready_KB_Optimized.json.gz"
-try:
-    with gzip.open(JSON_FILE_PATH, "rt", encoding="utf-8") as file:
-        knowledge_base = json.load(file)
-    print("Loaded JSON Keys:", knowledge_base.keys())
-except Exception as e:
-    print(f"Error loading JSON file: {str(e)}")
-    knowledge_base = {}
+@app.get("/get_quote")
+def get_quote(
+    pincode: str, product: str, family_structure: str, parent_size: str, age: str, sum_insured: str
+):
+    """Retrieve pricing based on user input."""
+    zone = knowledge_base["Pincode_Zone_Mapping"].get(pincode, {}).get(product, {}).get("Zone", "Unknown")
+    if zone == "Unknown":
+        raise HTTPException(status_code=404, detail="Pincode not mapped to a valid zone")
 
-# ✅ Define Request Model
-class QuoteRequest(BaseModel):
-    product: str
-    zone: str
-    familyStructure: str
-    parentSize: str
-    sumInsured: str
+    price_data = (
+        knowledge_base["Pricing_Data"]
+        .get(product, {})
+        .get(zone, {})
+        .get(family_structure, {})
+        .get(parent_size, {})
+        .get(age, {})
+        .get(f"Sum_Insured_{sum_insured}", {})
+    )
 
-# ✅ Add Debugging to Check If Keys Exist
-@app.post("/get_quote")
-def get_quote(request: QuoteRequest):
-    try:
-        print(f"Received request: {request.dict()}")
-        if "Knowledge_Base" not in knowledge_base or "PR" not in knowledge_base["Knowledge_Base"]:
-            raise HTTPException(status_code=500, detail="Pricing data not found in JSON")
-        
-        pricing_data = knowledge_base["Knowledge_Base"]["PR"]
-        print("Available Products:", pricing_data.keys())
-        if request.product not in pricing_data:
-            raise HTTPException(status_code=404, detail="Product not found in JSON")
+    return {"zone": zone, "pricing_details": price_data}
 
-        pricing_path = pricing_data[request.product]
-        print("Available Zones:", pricing_path.keys())
-        if request.zone not in pricing_path:
-            raise HTTPException(status_code=404, detail="Zone not found in JSON")
+@app.get("/get_coverage")
+def get_coverage(product: str, sum_insured: str):
+    """Retrieve coverage details for a product and sum insured."""
+    coverage_data = knowledge_base["Benefits_Data"].get(product, {}).get(f"Sum_Insured_{sum_insured}", {})
+    if not coverage_data:
+        raise HTTPException(status_code=404, detail="Coverage details not found")
 
-        pricing_path = pricing_path[request.zone]
-        print("Available Family Structures:", pricing_path.keys())
-        if request.familyStructure not in pricing_path:
-            raise HTTPException(status_code=404, detail="Family Structure not found in JSON")
+    return {"coverage_details": coverage_data}
 
-        pricing_path = pricing_path[request.familyStructure]
-        print("Available Parent Sizes:", pricing_path.keys())
-        if request.parentSize not in pricing_path:
-            raise HTTPException(status_code=404, detail="Parent Size not found in JSON")
+@app.get("/get_exclusions")
+def get_exclusions(product: str):
+    """Retrieve exclusions for a product."""
+    exclusions = knowledge_base["Exclusions"].get(product, [])
+    if not exclusions:
+        raise HTTPException(status_code=404, detail="No exclusions found for this product")
 
-        pricing_path = pricing_path[request.parentSize]
-        print("Available Sum Insured Options:", pricing_path.keys())
-        if request.sumInsured not in pricing_path:
-            raise HTTPException(status_code=404, detail="Sum Insured not found in JSON")
+    return {"exclusions": exclusions}
 
-        pricing_path = pricing_path[request.sumInsured]
-        print("Retrieved Pricing Data:", pricing_path)  # Debug log
+@app.get("/compare_plans")
+def compare_plans(pincode: str, product1: str, product2: str, sum_insured: str):
+    """Compare two insurance plans based on pricing and coverage."""
+    zone = knowledge_base["Pincode_Zone_Mapping"].get(pincode, {}).get(product1, {}).get("Zone", "Unknown")
 
-        if "FP" not in pricing_path:
-            raise HTTPException(status_code=404, detail=f"Missing 'FP' in JSON Data: {pricing_path}")
+    if zone == "Unknown":
+        raise HTTPException(status_code=404, detail="Pincode not mapped to a valid zone")
 
-        return {
-            "finalPremium": pricing_path["FP"],
-            "optionalCovers": {k: v for k, v in pricing_path.items() if k not in ["FP"]}
-        }
+    price1 = knowledge_base["Pricing_Data"].get(product1, {}).get(zone, {}).get(f"Sum_Insured_{sum_insured}", {})
+    price2 = knowledge_base["Pricing_Data"].get(product2, {}).get(zone, {}).get(f"Sum_Insured_{sum_insured}", {})
+    coverage1 = knowledge_base["Benefits_Data"].get(product1, {}).get(f"Sum_Insured_{sum_insured}", {})
+    coverage2 = knowledge_base["Benefits_Data"].get(product2, {}).get(f"Sum_Insured_{sum_insured}", {})
 
-    except KeyError as e:
-        print(f"Error: {str(e)}")
-        raise HTTPException(status_code=404, detail=f"Missing key in JSON: {str(e)}")
-    except Exception as e:
-        print(f"Unexpected Error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Server Error: {str(e)}")
-
-# ✅ Run FastAPI Server
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=10000)
+    return {
+        "zone": zone,
+        "comparison": {
+            "product1": {"pricing": price1, "coverage": coverage1},
+            "product2": {"pricing": price2, "coverage": coverage2},
+        },
+    }
 
 
