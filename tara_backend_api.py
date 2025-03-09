@@ -16,8 +16,13 @@ app = FastAPI()
 def home():
     return {"message": "Welcome to Tara AI Backend!"}
 
+
 @app.get("/get_quote")
-def get_quote(pincode: str, product: str, family_structure: str, parent_size: str, age: str, sum_insured: str):
+def get_quote(
+    pincode: str, product: str, family_structure: str, parent_size: str, age: str, sum_insured: str,
+    age_band_parent_1: str = None, age_band_parent_2: str = None, age_band_parent_3: str = None, age_band_parent_4: str = None
+):
+
     """Retrieve pricing based on user input."""
     
     # Fetch Zone from Pincode Mapping
@@ -33,12 +38,16 @@ def get_quote(pincode: str, product: str, family_structure: str, parent_size: st
     # Fetch Pricing Data
     price_data = (
         knowledge_base["Pricing_Data"]
-        .get(product, {})
-        .get(zone, {})
-        .get(family_structure, {})
-        .get(parent_size, {})
-        .get(age, {})
-        .get(f"Sum_Insured_{sum_insured}", {})
+.get(product, {})
+    .get(zone, {})
+    .get(family_structure, {})
+    .get(parent_size, {})
+    .get(age, {})
+    .get(age_band_parent_1, {})
+    .get(age_band_parent_2, {})
+    .get(age_band_parent_3, {})
+    .get(age_band_parent_4, {})
+    .get(f"Sum_Insured_{sum_insured}", {})
     )
 
     return {"zone": zone, "pricing_details": price_data}
