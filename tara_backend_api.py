@@ -39,32 +39,32 @@ class QuoteRequest(BaseModel):
 def get_quote(request: QuoteRequest):
     try:
         print(f"Received request: {request.dict()}")
+        print("Available Products:", knowledge_base["Knowledge_Base"]["PR"].keys())
 
-        # Check if product exists
         if request.product not in knowledge_base["Knowledge_Base"]["PR"]:
             raise HTTPException(status_code=404, detail="Product not found in JSON")
 
         pricing_path = knowledge_base["Knowledge_Base"]["PR"][request.product]
+        print("Available Zones:", pricing_path.keys())
 
-        # Check if zone exists
         if request.zone not in pricing_path:
             raise HTTPException(status_code=404, detail="Zone not found in JSON")
 
         pricing_path = pricing_path[request.zone]
+        print("Available Family Structures:", pricing_path.keys())
 
-        # Check if family structure exists
         if request.familyStructure not in pricing_path:
             raise HTTPException(status_code=404, detail="Family Structure not found in JSON")
 
         pricing_path = pricing_path[request.familyStructure]
+        print("Available Parent Sizes:", pricing_path.keys())
 
-        # Check if parent size exists
         if request.parentSize not in pricing_path:
             raise HTTPException(status_code=404, detail="Parent Size not found in JSON")
 
         pricing_path = pricing_path[request.parentSize]
+        print("Available Sum Insured:", pricing_path.keys())
 
-        # Check if sum insured exists
         if request.sumInsured not in pricing_path:
             raise HTTPException(status_code=404, detail="Sum Insured not found in JSON")
 
@@ -76,6 +76,7 @@ def get_quote(request: QuoteRequest):
     except KeyError as e:
         print(f"Error: {str(e)}")
         raise HTTPException(status_code=404, detail=f"Missing key in JSON: {str(e)}")
+
 
 # ✅ Run FastAPI Server
 if __name__ == "__main__":
