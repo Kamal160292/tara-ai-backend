@@ -1,10 +1,17 @@
-@app.get("/")
-def home():
-    return {"message": "Tara AI Backend is running 🎉"}
+
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import json
 import gzip
+
+# Initialize FastAPI app
+app = FastAPI()
+
+# Root Route
+@app.get("/")
+def home():
+    return {"message": "Tara AI Backend is running 🎉"}
+
 
 # Load the optimized JSON file
 JSON_FILE_PATH = "PARA_AUM_Production_Ready_KB_Optimized.json.gz"
