@@ -97,7 +97,19 @@ def query_para_aum(query_type: str, inputs: dict):
     """Unified API for all PARA AUM queries"""
 
     if query_type == "get_quote":
-        return get_quote(**inputs)
+    return get_quote(
+        pincode=inputs["pincode"],
+        product=inputs["product"],
+        family_structure=inputs["family_structure"],
+        parent_size=inputs["parent_size"],
+        eldest_age=inputs["eldest_age"],
+        sum_insured=inputs["sum_insured"],
+        parent_1_age=inputs.get("parent_1_age", None),
+        parent_2_age=inputs.get("parent_2_age", None),
+        parent_3_age=inputs.get("parent_3_age", None),
+        parent_4_age=inputs.get("parent_4_age", None)
+    )
+
 
     elif query_type == "get_coverage":
         return get_coverage(**inputs)
