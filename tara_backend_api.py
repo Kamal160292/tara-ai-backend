@@ -5,20 +5,28 @@ import gzip
 
 # Initialize FastAPI app
 app = FastAPI()
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+import json
+import gzip
+
+# ✅ Initialize FastAPI app
+app = FastAPI()
 
 # ✅ Add this root route to fix the 404 error
 @app.get("/")
 def home():
     return {"message": "Tara AI Backend is running 🎉"}
-# Load the optimized JSON file
-# Load the optimized JSON file
+
+# ✅ Load the optimized JSON file
 JSON_FILE_PATH = "PARA_AUM_Production_Ready_KB_Optimized.json.gz"
 with gzip.open(JSON_FILE_PATH, "rt", encoding="utf-8") as file:
     knowledge_base = json.load(file)
 
-# Debug: Print loaded JSON keys
+# ✅ Debug: Print loaded JSON keys
 print("Loaded JSON Keys:", knowledge_base.keys())
 
+# ✅ Define Request Model
 class QuoteRequest(BaseModel):
     product: str
     zone: str
@@ -26,17 +34,50 @@ class QuoteRequest(BaseModel):
     parentSize: str
     sumInsured: str
 
+# ✅ Add Debugging to Check If Keys Exist
 @app.post("/get_quote")
 def get_quote(request: QuoteRequest):
     try:
-        pricing_path = knowledge_base["Knowledge_Base"]["PR"][request.product][request.zone][request.familyStructure][request.parentSize][request.sumInsured]
+        print(f"Received request: {request.dict()}")
+
+        # Check if product exists
+        if request.product not in knowledge_base["Knowledge_Base"]["PR"]:
+            raise HTTPException(status_code=404, detail="Product not found in JSON")
+
+        pricing_path = knowledge_base["Knowledge_Base"]["PR"][request.product]
+
+        # Check if zone exists
+        if request.zone not in pricing_path:
+            raise HTTPException(status_code=404, detail="Zone not found in JSON")
+
+        pricing_path = pricing_path[request.zone]
+
+        # Check if family structure exists
+        if request.familyStructure not in pricing_path:
+            raise HTTPException(status_code=404, detail="Family Structure not found in JSON")
+
+        pricing_path = pricing_path[request.familyStructure]
+
+        # Check if parent size exists
+        if request.parentSize not in pricing_path:
+            raise HTTPException(status_code=404, detail="Parent Size not found in JSON")
+
+        pricing_path = pricing_path[request.parentSize]
+
+        # Check if sum insured exists
+        if request.sumInsured not in pricing_path:
+            raise HTTPException(status_code=404, detail="Sum Insured not found in JSON")
+
         return {
             "finalPremium": pricing_path["FP"],
             "optionalCovers": {k: v for k, v in pricing_path.items() if k not in ["FP"]}
         }
-    except KeyError:
-        raise HTTPException(status_code=404, detail="No pricing found for the selected criteria.")
+    
+    except KeyError as e:
+        print(f"Error: {str(e)}")
+        raise HTTPException(status_code=404, detail=f"Missing key in JSON: {str(e)}")
 
+# ✅ Run FastAPI Server
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=10000)
