@@ -15,8 +15,6 @@ JSON_FILE_PATH = "PARA_AUM_Production_Ready_KB_Optimized.json.gz"
 with gzip.open(JSON_FILE_PATH, "rt", encoding="utf-8") as file:
     knowledge_base = json.load(file)
 
-app = FastAPI()
-
 class QuoteRequest(BaseModel):
     product: str
     zone: str
