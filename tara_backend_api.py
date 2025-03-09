@@ -1,3 +1,6 @@
+@app.get("/")
+def home():
+    return {"message": "Tara AI Backend is running 🎉"}
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import json
