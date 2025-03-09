@@ -6,12 +6,10 @@ import gzip
 # Initialize FastAPI app
 app = FastAPI()
 
-# Root Route
+# ✅ Add this root route to fix the 404 error
 @app.get("/")
 def home():
     return {"message": "Tara AI Backend is running 🎉"}
-
-
 # Load the optimized JSON file
 JSON_FILE_PATH = "PARA_AUM_Production_Ready_KB_Optimized.json.gz"
 with gzip.open(JSON_FILE_PATH, "rt", encoding="utf-8") as file:
