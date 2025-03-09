@@ -18,7 +18,6 @@ with gzip.open(JSON_FILE_PATH, "rt", encoding="utf-8") as file:
 
 # Debug: Print loaded JSON keys
 print("Loaded JSON Keys:", knowledge_base.keys())
-.
 
 class QuoteRequest(BaseModel):
     product: str
