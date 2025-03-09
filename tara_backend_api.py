@@ -68,10 +68,16 @@ def get_quote(request: QuoteRequest):
         if request.sumInsured not in pricing_path:
             raise HTTPException(status_code=404, detail="Sum Insured not found in JSON")
 
-        return {
-            "finalPremium": pricing_path["FP"],
-            "optionalCovers": {k: v for k, v in pricing_path.items() if k not in ["FP"]}
-        }
+        print("Retrieved Pricing Data:", pricing_path)  # Debug log
+
+if "FP" not in pricing_path:
+    raise HTTPException(status_code=404, detail=f"Missing 'FP' in JSON Data: {pricing_path}")
+
+return {
+    "finalPremium": pricing_path["FP"],
+    "optionalCovers": {k: v for k, v in pricing_path.items() if k not in ["FP"]}
+}
+
     
     except KeyError as e:
         print(f"Error: {str(e)}")
