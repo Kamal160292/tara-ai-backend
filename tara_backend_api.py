@@ -1,21 +1,26 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-import json
 import os
-import logging
-
+import json
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Load AI Knowledge Base JSON
-json_path = "/Users/kamalnath/tara-ai-backend/Final_Optimized_FastAPI_JSON_v6.json"
+import os
+import json
+
+# Get JSON path dynamically based on Render environment
+json_path = os.getenv("JSON_PATH", "Final_Optimized_FastAPI_JSON_v6.json")
+
+# Check if the JSON file exists in the current directory (for Render)
 if not os.path.exists(json_path):
-    logging.error(f"JSON file not found: {json_path}")
+    json_path = "/opt/render/project/src/Final_Optimized_FastAPI_JSON_v6.json"
+
+if not os.path.exists(json_path):
     raise FileNotFoundError(f"JSON file not found: {json_path}")
 
 with open(json_path, "r", encoding="utf-8") as file:
-    data = json.load(file)
-    logging.info(f"JSON file loaded successfully from {json_path}")
+    knowledge_base = json.load(file)
 
 app = FastAPI()
 
