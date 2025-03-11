@@ -1,17 +1,14 @@
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from pydantic import BaseModel
 import os
 import json
 import logging
+
 # Configure logging
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s - %(levelname)s - %(message)s")
 
 # Load AI Knowledge Base JSON
-import os
-import json
-
-# Get JSON path dynamically based on Render environment
 json_path = os.getenv("JSON_PATH", "Final_Optimized_FastAPI_JSON_v6.json")
 
 # Check if the JSON file exists in the current directory (for Render)
@@ -26,14 +23,19 @@ with open(json_path, "r", encoding="utf-8") as file:
 
 app = FastAPI()
 
-# Enable CORS to allow frontend requests
+# ✅ Enable CORS with OPTIONS requests to fix preflight errors
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow all origins (you can restrict this to specific domains)
+    allow_origins=["*"],  # Allow requests from any origin (can restrict later)
     allow_credentials=True,
-    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_methods=["OPTIONS", "POST", "GET", "PUT", "DELETE"],  # Explicitly allow OPTIONS for preflight
     allow_headers=["*"],  # Allow all headers
 )
+
+# ✅ Allow OPTIONS requests for every POST endpoint
+@app.options("/{full_path:path}")
+async def preflight_handler(full_path: str, request: Request):
+    return {}
 
 # Define Request Model
 class QueryRequest(BaseModel):
@@ -51,24 +53,24 @@ class QueryRequest(BaseModel):
     scenario: str = None
     expected_objections: list = None
 
-# Helper function to get zone from pincode
+# ✅ Fix: Get Zone Function (Using Correct JSON Structure)
 def get_zone(product_id, pincode):
     key = f"{product_id}|{pincode}"
-    return data["pincode_zone_mapping"].get(key, "Unknown")
+    return knowledge_base["pincode_zone_mapping"].get(key, "Unknown")
 
 @app.get("/")
 def home():
     return {"message": "Welcome to Tara AI Backend!"}
 
-@app.post("/get_quote")
-def get_quote(request: QueryRequest):
+@app.post("/get_quote")  
+def get_quote(request: QueryRequest):  
     zone = get_zone(request.product_id, request.pincode)
     key = f"{request.product_id}|{request.sum_insured}|{request.eldest_adult_age_band}|{zone}|{request.family_structure}|{request.parent_size}|{request.parent_age_band}"
-    
+
     logging.debug(f"Generated Key for Quote: {key}")
     
-    if key in data["pricing_index"]:
-        return data["pricing_index"][key]
+    if key in knowledge_base["pricing_index"]:
+        return knowledge_base["pricing_index"][key]
     else:
         logging.warning(f"Quote not found for key: {key}")
         return {"error": "Quote not found", "generated_key": key}
@@ -80,12 +82,12 @@ def recommend_product(request: QueryRequest):
 @app.get("/get_product_info/{product_id}/{sum_insured}")
 def get_product_info(product_id: str, sum_insured: str):
     key = f"{product_id}|{sum_insured}"
-    return {"info": data["benefits_index"].get(key, "No details found")}
+    return {"info": knowledge_base["benefits_index"].get(key, "No details found")}
 
 @app.get("/get_coverage_exclusions/{product_id}/{disease}")
 def get_coverage_exclusions(product_id: str, disease: str):
     key = f"{product_id}|{disease}"
-    return data["exclusions_index"].get(key, {"error": "No exclusion data found"})
+    return knowledge_base["exclusions_index"].get(key, {"error": "No exclusion data found"})
 
 @app.post("/get_custom_pitch")
 def get_custom_pitch(request: QueryRequest):
@@ -95,7 +97,7 @@ def get_custom_pitch(request: QueryRequest):
 def ai_roleplay(request: QueryRequest):
     return {"response": "AI roleplay logic will be implemented here."}
 
-# Run FastAPI Server
+# ✅ Fix: Ensure Render Runs This Properly
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
