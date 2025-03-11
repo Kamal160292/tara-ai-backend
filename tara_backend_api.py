@@ -1,5 +1,6 @@
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import os
 import json
@@ -23,19 +24,26 @@ with open(json_path, "r", encoding="utf-8") as file:
 
 app = FastAPI()
 
-# ✅ Enable CORS with OPTIONS requests to fix preflight errors
+# Enable CORS and explicitly allow OPTIONS requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # Allow requests from any origin (can restrict later)
+    allow_origins=["*"],  # Allow requests from any origin
     allow_credentials=True,
-    allow_methods=["OPTIONS", "POST", "GET", "PUT", "DELETE"],  # Explicitly allow OPTIONS for preflight
+    allow_methods=["OPTIONS", "POST", "GET", "PUT", "DELETE"],  # Explicitly allow OPTIONS
     allow_headers=["*"],  # Allow all headers
+    expose_headers=["*"]
 )
 
-# ✅ Allow OPTIONS requests for every POST endpoint
+# Handle Preflight `OPTIONS` Requests for All Routes
 @app.options("/{full_path:path}")
-async def preflight_handler(full_path: str, request: Request):
-    return {}
+async def preflight_handler(full_path: str):
+    return JSONResponse(content={
+        "message": "Preflight request successful"
+    }, headers={
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "OPTIONS, GET, POST, PUT, DELETE",
+        "Access-Control-Allow-Headers": "*",
+    })
 
 # Define Request Model
 class QueryRequest(BaseModel):
@@ -53,14 +61,14 @@ class QueryRequest(BaseModel):
     scenario: str = None
     expected_objections: list = None
 
-# ✅ Fix: Get Zone Function (Using Correct JSON Structure)
+# Fix: Get Zone Function (Using Correct JSON Structure)
 def get_zone(product_id, pincode):
     key = f"{product_id}|{pincode}"
     return knowledge_base["pincode_zone_mapping"].get(key, "Unknown")
 
 @app.get("/")
 def home():
-    return {"message": "Welcome to Tara AI Backend!"}
+    return {"message": "Welcome to Tara ✨ 1.0 - The Greatest AI Bot!"}
 
 @app.post("/get_quote")  
 def get_quote(request: QueryRequest):  
@@ -70,10 +78,13 @@ def get_quote(request: QueryRequest):
     logging.debug(f"Generated Key for Quote: {key}")
     
     if key in knowledge_base["pricing_index"]:
-        return knowledge_base["pricing_index"][key]
+        response = JSONResponse(content=knowledge_base["pricing_index"][key])
     else:
         logging.warning(f"Quote not found for key: {key}")
-        return {"error": "Quote not found", "generated_key": key}
+        response = JSONResponse(content={"error": "Quote not found", "generated_key": key})
+    
+    response.headers["Access-Control-Allow-Origin"] = "*"
+    return response
 
 @app.post("/recommend_product")
 def recommend_product(request: QueryRequest):
@@ -97,8 +108,7 @@ def get_custom_pitch(request: QueryRequest):
 def ai_roleplay(request: QueryRequest):
     return {"response": "AI roleplay logic will be implemented here."}
 
-# ✅ Fix: Ensure Render Runs This Properly
+# Fix: Ensure Render Runs This Properly
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
-
