@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 import os
@@ -24,6 +25,15 @@ with open(json_path, "r", encoding="utf-8") as file:
     knowledge_base = json.load(file)
 
 app = FastAPI()
+
+# Enable CORS to allow frontend requests
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # Allow all origins (you can restrict this to specific domains)
+    allow_credentials=True,
+    allow_methods=["*"],  # Allow all HTTP methods (GET, POST, etc.)
+    allow_headers=["*"],  # Allow all headers
+)
 
 # Define Request Model
 class QueryRequest(BaseModel):
